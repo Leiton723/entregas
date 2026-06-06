@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gestão de Entregas</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f5; color: #1a1a1a; min-height: 100vh; }
+  .container { max-width: 640px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #666; margin-bottom: 1.5rem; }
+  .tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 1rem; }
+  .tab { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 8px; background: white; font-size: 13px; cursor: pointer; color: #444; }
+  .tab.active { background: #1a1a1a; color: white; border-color: #1a1a1a; font-weight: 500; }
+  .card { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 1rem; }
+  .card-title { font-size: 13px; font-weight: 500; color: #666; margin-bottom: 10px; }
+  input, select, textarea { width: 100%; padding: 9px 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; color: #1a1a1a; background: white; outline: none; transition: border-color 0.15s; }
+  input:focus, select:focus { border-color: #1a1a1a; }
+  .grid { display: grid; gap: 8px; }
+  .row { display: flex; gap: 8px; align-items: center; }
+  button { padding: 9px 16px; border: 1px solid #ddd; border-radius: 8px; background: white; font-size: 13px; cursor: pointer; color: #1a1a1a; transition: background 0.15s; }
+  button:hover { background: #f0f0f0; }
+  button.primary { background: #1a1a1a; color: white; border-color: #1a1a1a; }
+  button.primary:hover { background: #333; }
+  button.full { width: 100%; margin-top: 1rem; }
+  button.danger { color: #c0392b; }
+  .client-card { background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 10px; }
+  .client-card.dragging { opacity: 0.4; }
+  .client-card.drag-over { border-color: #1a1a1a; background: #f8f8f8; }
+  .num-badge { width: 24px; height: 24px; border-radius: 50%; background: #e8f0fe; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: #1a73e8; flex-shrink: 0; }
+  .num-badge.g2 { background: #e6f4ea; color: #34a853; }
+  .client-info { flex: 1; min-width: 0; }
+  .client-name { font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .client-addr { font-size: 11px; color: #666; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .client-note { font-size: 11px; color: #888; font-style: italic; }
+  .arrow-btns { display: flex; flex-direction: column; gap: 2px; flex-shrink: 0; }
+  .arrow-btns button { padding: 2px 6px; font-size: 11px; }
+  .empty { text-align: center; padding: 2.5rem; color: #999; font-size: 14px; }
+  .empty-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+  .sep { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .sep-line { flex: 1; height: 1px; background: #e0e0e0; }
+  .sep-label { font-size: 11px; color: #888; white-space: nowrap; }
+  .warn-box { background: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; padding: 10px 14px; margin-bottom: 1rem; font-size: 13px; color: #7a5800; }
+  .qr-block { margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee; }
+  .qr-label { font-size: 12px; font-weight: 500; color: #555; margin-bottom: 8px; }
+  .qr-row { display: flex; gap: 12px; align-items: flex-start; }
+  .qr-box { min-width: 90px; min-height: 90px; flex-shrink: 0; }
+  .qr-info { flex: 1; }
+  .qr-info p { font-size: 11px; color: #777; margin-bottom: 6px; }
+  .qr-info a { font-size: 12px; color: #1a73e8; text-decoration: none; }
+  .hist-card { background: white; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1rem 1.25rem; margin-bottom: 10px; }
+  .hist-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  .hist-name { font-weight: 500; font-size: 14px; }
+  .hist-meta { font-size: 12px; color: #777; margin-top: 2px; }
+  details summary { font-size: 12px; color: #777; cursor: pointer; margin-top: 12px; list-style: none; }
+  details summary::-webkit-details-marker { display: none; }
+  .clist-item { display: flex; align-items: flex-start; gap: 6px; font-size: 12px; padding: 4px 0; border-bottom: 1px solid #f0f0f0; }
+  .clist-num { width: 18px; height: 18px; border-radius: 50%; background: #f0f0f0; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; flex-shrink: 0; margin-top: 1px; }
+  .func-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 10px 14px; display: flex; justify-content: space-between; align-items: center; }
+  .grip { cursor: grab; color: #bbb; font-size: 18px; flex-shrink: 0; }
+  .tag { display: inline-flex; align-items: center; gap: 4px; background: #f0f0f0; border-radius: 6px; padding: 3px 8px; font-size: 11px; color: #555; margin-bottom: 6px; }
+  @media (max-width: 480px) { .container { padding: 1rem 0.75rem 3rem; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🚚 Gestão de Entregas</h1>
+  <p class="subtitle">Rota otimizada com QR codes de navegação</p>
+
+  <div class="tabs">
+    <button class="tab active" id="tab-volta" onclick="showTab('volta')">Volta do dia</button>
+    <button class="tab" id="tab-hist" onclick="showTab('hist')">Histórico</button>
+    <button class="tab" id="tab-func" onclick="showTab('func')">Funcionários</button>
+  </div>
+
+  <!-- VOLTA DO DIA -->
+  <div id="tab-content-volta">
+    <div id="view-form">
+      <div class="card">
+        <p class="card-title">Detalhes da volta</p>
+        <div class="grid">
+          <select id="sel-func"><option value="">— Seleciona o funcionário —</option></select>
+          <input type="date" id="inp-data" />
+          <input type="text" id="inp-partida" placeholder="Ponto de partida (ex: Armazém, Rua X, Lisboa)" />
+        </div>
+      </div>
+      <div class="card">
+        <p class="card-title">Adicionar cliente</p>
+        <div class="grid">
+          <input type="text" id="inp-nome" placeholder="Nome do cliente" />
+          <input type="text" id="inp-morada" placeholder="Rua, número, código postal, cidade" />
+          <input type="text" id="inp-nota" placeholder="Nota extra (opcional)" />
+          <button class="primary" onclick="addClient()">+ Adicionar cliente</button>
+        </div>
+      </div>
+      <div id="client-list" class="grid" style="gap:8px;"></div>
+      <div id="empty-state" class="empty"><span class="empty-icon">📦</span>Ainda sem clientes adicionados</div>
+      <button class="full primary" onclick="abrirRevisao()">👁 Rever e confirmar ordem</button>
+    </div>
+
+    <!-- REVISÃO -->
+    <div id="view-revisao" style="display:none;">
+      <div class="warn-box">⚠️ Revê e ajusta a ordem antes de gerar os QR codes. Arrasta ou usa as setas para reordenar.</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <p class="card-title" style="margin:0;">Ordem da rota</p>
+          <span id="rev-info" style="font-size:12px;color:#777;"></span>
+        </div>
+        <div id="rev-list" class="grid" style="gap:6px;"></div>
+      </div>
+      <div class="row">
+        <button style="flex:1;" onclick="voltarForm()">← Voltar</button>
+        <button class="primary" style="flex:1;" onclick="confirmarVolta()">✓ Confirmar e guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HISTÓRICO -->
+  <div id="tab-content-hist" style="display:none;">
+    <div id="hist-list"></div>
+    <div id="hist-empty" class="empty"><span class="empty-icon">🗂</span>Sem voltas guardadas ainda</div>
+  </div>
+
+  <!-- FUNCIONÁRIOS -->
+  <div id="tab-content-func" style="display:none;">
+    <div class="card">
+      <p class="card-title">Adicionar funcionário</p>
+      <div class="row">
+        <input type="text" id="inp-func" placeholder="Nome do funcionário" style="flex:1;" />
+        <button onclick="addFunc()">+ Adicionar</button>
+      </div>
+    </div>
+    <div id="func-list" class="grid" style="gap:8px;"></div>
+  </div>
+</div>
+
+<script>
+let clients=[], counter=0, funcionarios=[], historico=[], reviewClients=[], dragIdx=null;
+
+function save(){try{localStorage.setItem('del_func',JSON.stringify(funcionarios));localStorage.setItem('del_hist',JSON.stringify(historico));}catch(e){}}
+function load(){try{const f=localStorage.getItem('del_func');const h=localStorage.getItem('del_hist');if(f)funcionarios=JSON.parse(f);if(h)historico=JSON.parse(h);}catch(e){}}
+
+function showTab(tab){
+  ['volta','hist','func'].forEach(t=>{
+    document.getElementById('tab-content-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('tab-'+t).className='tab'+(t===tab?' active':'');
+  });
+  if(tab==='hist')renderHist();
+  if(tab==='func')renderFunc();
+}
+
+function addFunc(){
+  const n=document.getElementById('inp-func').value.trim();
+  if(!n)return;
+  funcionarios.push(n);
+  document.getElementById('inp-func').value='';
+  save();renderFunc();renderFuncDropdown();
+}
+function removeFunc(i){funcionarios.splice(i,1);save();renderFunc();renderFuncDropdown();}
+function renderFuncDropdown(){
+  const sel=document.getElementById('sel-func');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">— Seleciona o funcionário —</option>'+funcionarios.map(f=>`<option value="${f}"${f===cur?' selected':''}>${f}</option>`).join('');
+}
+function renderFunc(){
+  const el=document.getElementById('func-list');
+  if(!funcionarios.length){el.innerHTML='<p style="font-size:13px;color:#999;text-align:center;">Nenhum funcionário adicionado</p>';return;}
+  el.innerHTML=funcionarios.map((f,i)=>`
+    <div class="func-card">
+      <span style="font-size:14px;">👤 ${f}</span>
+      <button class="danger" onclick="removeFunc(${i})">🗑</button>
+    </div>`).join('');
+}
+
+function addClient(){
+  const nome=document.getElementById('inp-nome').value.trim();
+  const morada=document.getElementById('inp-morada').value.trim();
+  const nota=document.getElementById('inp-nota').value.trim();
+  if(!nome||!morada){alert('Preenche o nome e a morada.');return;}
+  clients.push({id:counter++,nome,morada,nota});
+  document.getElementById('inp-nome').value='';
+  document.getElementById('inp-morada').value='';
+  document.getElementById('inp-nota').value='';
+  renderList();
+}
+function removeClient(id){clients=clients.filter(c=>c.id!==id);renderList();}
+
+function renderList(){
+  const list=document.getElementById('client-list');
+  const empty=document.getElementById('empty-state');
+  list.innerHTML='';
+  if(!clients.length){empty.style.display='block';return;}
+  empty.style.display='none';
+  clients.forEach((c,idx)=>{
+    const card=document.createElement('div');
+    card.className='client-card';
+    card.innerHTML=`
+      <div class="num-badge">${idx+1}</div>
+      <div class="client-info">
+        <div class="client-name">${c.nome}</div>
+        <div class="client-addr">${c.morada}</div>
+        ${c.nota?`<div class="client-note">${c.nota}</div>`:''}
+      </div>
+      <div class="arrow-btns">
+        <button onclick="moveClient(${c.id},-1)">▲</button>
+        <button onclick="moveClient(${c.id},1)">▼</button>
+      </div>
+      <button class="danger" onclick="removeClient(${c.id})">🗑</button>`;
+    list.appendChild(card);
+  });
+}
+function moveClient(id,dir){
+  const i=clients.findIndex(c=>c.id===id);
+  const j=i+dir;
+  if(j<0||j>=clients.length)return;
+  [clients[i],clients[j]]=[clients[j],clients[i]];
+  renderList();
+}
+
+function abrirRevisao(){
+  const func=document.getElementById('sel-func').value;
+  const data=document.getElementById('inp-data').value;
+  if(!func){alert('Seleciona um funcionário.');return;}
+  if(!data){alert('Define a data da volta.');return;}
+  if(!clients.length){alert('Adiciona pelo menos um cliente.');return;}
+  reviewClients=clients.map(c=>({...c}));
+  document.getElementById('view-form').style.display='none';
+  document.getElementById('view-revisao').style.display='block';
+  renderReview();
+}
+function voltarForm(){
+  document.getElementById('view-revisao').style.display='none';
+  document.getElementById('view-form').style.display='block';
+}
+
+function renderReview(){
+  const list=document.getElementById('rev-list');
+  const info=document.getElementById('rev-info');
+  const grupos=reviewClients.length>9?2:1;
+  const meio=Math.ceil(reviewClients.length/2);
+  info.textContent=`${reviewClients.length} entrega${reviewClients.length!==1?'s':''} · ${grupos} QR code${grupos>1?'s':''}`;
+  list.innerHTML='';
+  reviewClients.forEach((c,idx)=>{
+    const isG2=reviewClients.length>9&&idx>=meio;
+    if(reviewClients.length>9&&idx===meio){
+      const sep=document.createElement('div');
+      sep.className='sep';
+      sep.innerHTML=`<div class="sep-line"></div><span class="sep-label">📱 QR code 2 começa aqui</span><div class="sep-line"></div>`;
+      list.appendChild(sep);
+    }
+    const card=document.createElement('div');
+    card.className='client-card';
+    card.draggable=true;
+    card.dataset.idx=idx;
+    card.innerHTML=`
+      <span class="grip">⠿</span>
+      <div class="num-badge${isG2?' g2':''}">${idx+1}</div>
+      <div class="client-info">
+        <div class="client-name">${c.nome}</div>
+        <div class="client-addr">${c.morada}</div>
+        ${c.nota?`<div class="client-note">${c.nota}</div>`:''}
+      </div>
+      <div class="arrow-btns">
+        <button onclick="moveReview(${idx},-1)">▲</button>
+        <button onclick="moveReview(${idx},1)">▼</button>
+      </div>`;
+    card.addEventListener('dragstart',e=>{dragIdx=idx;card.classList.add('dragging');});
+    card.addEventListener('dragend',e=>{dragIdx=null;card.classList.remove('dragging');});
+    card.addEventListener('dragover',e=>{e.preventDefault();card.classList.add('drag-over');});
+    card.addEventListener('dragleave',e=>{card.classList.remove('drag-over');});
+    card.addEventListener('drop',e=>{
+      e.preventDefault();card.classList.remove('drag-over');
+      if(dragIdx===null||dragIdx===idx)return;
+      const moved=reviewClients.splice(dragIdx,1)[0];
+      reviewClients.splice(idx,0,moved);
+      renderReview();
+    });
+    list.appendChild(card);
+  });
+}
+function moveReview(idx,dir){
+  const j=idx+dir;
+  if(j<0||j>=reviewClients.length)return;
+  [reviewClients[idx],reviewClients[j]]=[reviewClients[j],reviewClients[idx]];
+  renderReview();
+}
+
+function buildMapsUrl(partida,stops){
+  const base='https://www.google.com/maps/dir/';
+  const parts=[];
+  if(partida)parts.push(encodeURIComponent(partida));
+  stops.forEach(s=>parts.push(encodeURIComponent(s.morada)));
+  return base+parts.join('/');
+}
+
+function confirmarVolta(){
+  const func=document.getElementById('sel-func').value;
+  const data=document.getElementById('inp-data').value;
+  const partida=document.getElementById('inp-partida').value.trim();
+  const grupos=[];
+  if(reviewClients.length<=9){grupos.push(reviewClients.slice());}
+  else{const meio=Math.ceil(reviewClients.length/2);grupos.push(reviewClients.slice(0,meio));grupos.push(reviewClients.slice(meio));}
+  const urls=grupos.map(g=>buildMapsUrl(partida,g));
+  historico.unshift({id:Date.now(),funcionario:func,data,partida,clientes:[...reviewClients],urls});
+  save();
+  clients=[];counter=0;reviewClients=[];
+  renderList();
+  document.getElementById('view-revisao').style.display='none';
+  document.getElementById('view-form').style.display='block';
+  showTab('hist');
+}
+
+function renderHist(){
+  const el=document.getElementById('hist-list');
+  const empty=document.getElementById('hist-empty');
+  if(!historico.length){el.innerHTML='';empty.style.display='block';return;}
+  empty.style.display='none';
+  el.innerHTML='';
+  historico.forEach((v,vi)=>{
+    const d=new Date(v.data+'T12:00:00').toLocaleDateString('pt-PT',{day:'2-digit',month:'long',year:'numeric'});
+    const meio=Math.ceil(v.clientes.length/2);
+    const card=document.createElement('div');
+    card.className='hist-card';
+    let qrHtml=v.urls.map((url,gi)=>{
+      const cnt=v.urls.length>1?(gi===0?meio:v.clientes.length-meio):v.clientes.length;
+      return `<div class="qr-block">
+        <p class="qr-label">📱 QR Code ${gi+1} — ${cnt} entrega${cnt!==1?'s':''}</p>
+        <div class="qr-row">
+          <div class="qr-box" id="qr-h-${v.id}-${gi}"></div>
+          <div class="qr-info">
+            <p>Aponta a câmara para abrir a rota no Google Maps.</p>
+            <a href="${url}" target="_blank">🗺 Abrir rota no Maps</a>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    let clientesHtml=v.clientes.map((c,ci)=>{
+      const isG2=v.urls.length>1&&ci===meio;
+      const sepHtml=isG2?`<div class="sep"><div class="sep-line"></div><span class="sep-label">Grupo 2</span><div class="sep-line"></div></div>`:'';
+      return `${sepHtml}<div class="clist-item"><span class="clist-num">${ci+1}</span><div><strong>${c.nome}</strong><span style="display:block;color:#666;">${c.morada}</span>${c.nota?`<span style="color:#888;font-style:italic;font-size:11px;">${c.nota}</span>`:''}</div></div>`;
+    }).join('');
+    card.innerHTML=`
+      <div class="hist-header">
+        <div>
+          <div class="hist-name">👤 ${v.funcionario}</div>
+          <div class="hist-meta">${d} · ${v.clientes.length} entrega${v.clientes.length!==1?'s':''} · ${v.urls.length} QR code${v.urls.length>1?'s':''}</div>
+          ${v.partida?`<div class="hist-meta">📍 Partida: ${v.partida}</div>`:''}
+        </div>
+        <button class="danger" onclick="removeVolta(${vi})">🗑</button>
+      </div>
+      ${qrHtml}
+      <details><summary>📋 Ver lista de clientes</summary><div style="margin-top:8px;">${clientesHtml}</div></details>`;
+    el.appendChild(card);
+    v.urls.forEach((_,gi)=>{
+      setTimeout(()=>{
+        const qrEl=document.getElementById(`qr-h-${v.id}-${gi}`);
+        if(!qrEl||qrEl.hasChildNodes())return;
+        try{new QRCode(qrEl,{text:v.urls[gi],width:90,height:90,colorDark:'#000000',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.M});}catch(e){}
+      },300);
+    });
+  });
+}
+function removeVolta(idx){if(!confirm('Apagar esta volta?'))return;historico.splice(idx,1);save();renderHist();}
+
+load();
+document.getElementById('inp-data').value=new Date().toISOString().split('T')[0];
+renderFuncDropdown();renderFunc();showTab('volta');
+</script>
+</body>
+</html>
